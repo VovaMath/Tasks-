@@ -15,6 +15,20 @@
 5.+Мне очень не нравятся твои for() во всех функциях, обычно по списку идут while  до NULL
    Хорошо идём!
 
+
+Уже лучше:
+*+Функцию L_pop_front можно упростить, выкинуть if, разберись почему будет работать.
+* L_pop, L_popA, L_del -элемент ищем по id
+  (в список, после элемента с ид = 5, вставить элемент с ид = 8 и т.д.)
+
+* L_del1 чем тебе такой вариант плох : L1=L; L=L->next; delete L1;?
+* А если у тебя не только поле id, а к нему прилагается еще 100 полей, ты их все будешь копировать?
+  Эта функция должна возвращать поле id в качестве результата.
+
+* Нет функции удалить последний элемент списка.
+
+
+
 Индивид. задание:
    По списку L построить два списка: L1 - из положительных элементов и L2 – из отрицательных.
 
@@ -33,6 +47,10 @@ typedef struct link {
   } list;
 
 void L_print(list *L) { // вывод на экран
+    if(L==NULL) {
+        printf("List is empty\n");
+        return;
+    }
     printf("List:[");
     for(;;) {
         printf("%d ", L->id);
@@ -41,40 +59,102 @@ void L_print(list *L) { // вывод на экран
     }
     printf("]\n");
 }
-void L_start(list *L, int v) { // L:=список из одного элемента v
-    L->id = v;
-    L->next = NULL;
+
+int L_find(list *L, int v) { // номер числа v в списке L, или -1
+    int i = 0;
+    while(L!=NULL) {
+        if(L->id==v) return i;
+        L = L->next;
+        i++;
+    }
+    return -1;
 }
-void L_pop_front(list *L, int v) { // вставить число v в начало списка L
+
+void L_pop_front(list *&L, int v) { // вставить число v в начало списка L
     link *L1 = new link;
-    L1->id = L->id;
-    L1->next = L->next;
-    L->id = v;
-    L->next = L1;
+    L1->id = v;
+    L1->next = L;
+    L = L1;
 }
-void L_pop(list *L, int i, int v) { // вставить число v перед номером i в списке L
+
+// Прежняя версия:
+void L_pop0(list *&L, int i, int v) { // вставить число v перед номером i в списке L
+    if( L==NULL) {
+        L = new link;
+        L->id = v;
+        L->next = NULL;
+        return;
+    }
+    if(i==0) {
+        L_pop_front(L, v);
+        return;
+    }
+    link *L0=L, *L1;
     for( int j=0; j<i; j++) {
-        if( (L = L->next)==NULL) return;  // ошибка
+        L1 = L0;
+        if( (L0 = L0->next)==NULL) break;  // дошли до конца
     }
-    L_pop_front(L, v);
+    L_pop_front(L0, v);
+    L1->next = L0;
 }
-void L_popA(list *L, int i, int v) { // вставить число v ПОСЛЕ номера i в списке L
+
+void L_pop(list *&L, int v0, int v1) { // вставить число v1 перед числом v0 в списке L
+    int i = L_find(L, v0);
+    if( i>=0) L_pop0(L, i, v1);
+}
+
+void L_popA0(list *&L, int i, int v) { // вставить число v ПОСЛЕ номера i в списке L
+    if( L==NULL) {
+        L = new link;
+        L->id = v;
+        L->next = NULL;
+        return;
+    }
+    link *L0=L, *L1;
     for( int j=0; j<=i; j++) {
-        if( (L = L->next)==NULL) return;  // ошибка
+        L1 = L0;
+        if( (L0 = L0->next)==NULL) break;  // дошли до конца
     }
-    L_pop_front(L, v);
+    L_pop_front(L0, v);
+    L1->next = L0;
 }
-void L_popE(list *L, int v) { // вставить число v в хвост списка L
-    while( L->next != NULL) L = L->next;
+void L_popA(list *&L, int v0, int v1) { // вставить число v1 ПОСЛЕ числа v0 в списке L
+    int i = L_find(L, v0);
+    if( i>=0) L_popA0(L, i, v1);
+}
+void L_popE(list *&L, int v) { // вставить число v в хвост списка L
+    if( L==NULL) {
+        L = new link;
+        L->id = v;
+        L->next = NULL;
+        return;
+    }
+    list *L0 = L;
+    while( L0->next != NULL) L0 = L0->next;
     link *L1 = new link;
-    L->next = L1;
+    L0->next = L1;
     L1->id = v;
     L1->next = NULL;
 }
-void L_del1(list *L) { // удалить первый элемент
+void L_del1(list *&L) { // удалить первый элемент
     link *L1 = L->next;
     L->id = L1->id;
     L->next = L1->next;
+    delete L1;
+}
+void L_del_last(list *&L) { // удалить последний элемент
+    if( L->next==NULL) {
+        delete L;
+        L = NULL;
+        return;
+    }
+    link *L0 = L;
+    link *L1 = L0->next;
+    while(L1->next != NULL) {
+        L0 = L1;
+        L1 = L1->next;
+    }
+    L0->next = NULL;
     delete L1;
 }
 void L_del(list *L, int i) { // удалить i-й элемент
@@ -84,62 +164,26 @@ void L_del(list *L, int i) { // удалить i-й элемент
     L_del1(L);
 }
 // Индивидуальное задание: из списка L построить списки M1 и M2 из отриц. и полож. элементов
-void Indi(list *L,list *M1,list *M2) {
+void Indi(list *L,list *&M1,list *&M2) {
     int x;
-    bool fM1=true, fM2=true;    // списки пустые?
-    while( L->next != NULL)
+    M1 = M2 = NULL;
+    while( L != NULL)
     {
         x=L->id;
-        if (x>0 )
-        {
-            if( fM1) {
-                L_start(M1, x);
-                fM1=false;
-            } else
-            L_popE(M1,x);
-        }
-        if ((x )<0 )
-        {
-            if( fM2) {
-                L_start(M2,x);
-                fM2 = false;
-            } else
-            L_popE(M2,x);
-        }
+        if (x>0 ) L_popE(M1,x);
+        if (x<0 ) L_popE(M2,x);
         L = L->next;
     }
 }
 //------------------------------------------------------
 int main()
 {
-    list L, M1, M2;
-    int k, r;
-    /*
-    L_start(&L, 11);
-    L_popE(&L, -22);
-    L_popE(&L, 33);
-    L_popE(&L, 44);
-    L_popE(&L, -55);
-    L_popE(&L, 66);
-    */
-
-
-    bool first = true;
-    do {
-        printf("Value (0 - break):");
-        int r = scanf("%d", &k);
-        //printf("r=%d, k=%d\n", r, k);
-        if(r !=1) break;
-        if(first) {
-            L_start(&L, k);
-            first = false;
-        } else {
-            L_popE(&L, k);
-        }
-    } while(k != 0);
-
-    L_print(&L);
-    int action;
+    list *L=NULL, *M1=NULL, *M2=NULL;
+    for (int i=0;i<10;i++){
+        L_popE(L,rand()%10-5);
+    }
+    L_print(L);
+    int k, r, action;
     do {
         printf("\n0: Exit\n"
                "1: Insert at the begin\n"
@@ -147,22 +191,23 @@ int main()
                "3: Insert before the elem.\n"
                "4: Insert after the elem.\n"
                "5: Delete first element\n"
-               "6: Delete element\n"
-               "7: indiv: L-> (L+), (L-) \n>");
+               "6: Delete last element\n"
+               "7: Delete element\n"
+               "8: indiv: L-> (L+), (L-) \n>");
         cin>>action;
         if(action==0) break;
         if(action==1) {
             printf("Enter number");
             scanf("%d",&k);
-            L_pop_front(&L, k);
-            L_print(&L);
+            L_pop_front(L, k);
+            L_print(L);
             continue;
         }
         if(action==2) {
             printf("Enter number");
             scanf("%d",&k);
-            L_popE(&L, k);
-            L_print(&L);
+            L_popE(L, k);
+            L_print(L);
             continue;
         }
         if(action==3) {
@@ -170,8 +215,8 @@ int main()
             scanf("%d",&r);
             printf("Enter number");
             scanf("%d",&k);
-            L_pop(&L, r, k);
-            L_print(&L);
+            L_pop(L, r, k);
+            L_print(L);
             continue;
         }
         if(action==4) {
@@ -179,32 +224,36 @@ int main()
             scanf("%d",&r);
             printf("Enter number");
             scanf("%d",&k);
-            L_pop(&L, r+1, k);
-            L_print(&L);
+            L_pop(L, r+1, k);
+            L_print(L);
             continue;
         }
         if(action==5) {
-            L_del1(&L);
-            L_print(&L);
+            L_del1(L);
+            L_print(L);
             continue;
         }
         if(action==6) {
-            printf("Enter index");
-            scanf("%d",&r);
-            L_del(&L, r);
-            L_print(&L);
+            L_del_last(L);
+            L_print(L);
             continue;
         }
         if(action==7) {
-            printf("L :"); L_print(&L);
-            Indi(&L, &M1, &M2);
-            printf(">0:"); L_print(&M1);
-            printf("<0:"); L_print(&M2);
+            printf("Enter index");
+            scanf("%d",&r);
+            L_del(L, r);
+            L_print(L);
+            continue;
+        }
+        if(action==8) {
+            printf("L :"); L_print(L);
+            Indi(L, M1, M2);
+            printf(">0:"); L_print(M1);
+            printf("<0:"); L_print(M2);
             continue;
         }
 
     } while(1);
-
 
 return 0;
 }
